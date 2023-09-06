@@ -1,0 +1,371 @@
+<div style="display: flex; flex-direction: column; align-items: center;">
+  <!-- REMOVE THIS PART -->
+  <script src="https://js.stripe.com/v3/"></script> 
+  <!-- REMOVE THIS PART -->
+
+  <h1>Find the Right Discounts</h1>
+
+  <div>
+    <p>Select A Site</p>
+    <select id="product_selector_site_selector_dropdown" onchange="updateSelections()">
+      <option>Under-Armour</option>
+      <option>Under-2</option>
+    </select>
+
+    <p>Code Type</p>
+    <select id="product_selector_code_type_dropdown" onchange="updatePricePer()">
+      <option>40%</option>
+    </select>
+
+    <p>Quantity</p>
+    <input type="number" id="product_selector_quantity" value="1" onchange="validateSelectedQuantity() && updatePricePer()" />
+    <p id="product_selector_quantity_err_msg" style="color: red" />
+  </div>
+
+  <h2 id="product_selector_price_per">$24.90 / per</h2>
+  
+  <div id="product_selector_product_description">
+  </div>
+
+  <div>
+    <input type="text" id="product_selector_coupon" placeholder="Coupon Code" />
+    <input type="button" value="Apply" onclick="validateCurrentCoupon()" />
+    <p id="product_selector_coupon_err_msg" style="color: red"></p>
+  </div>
+
+  <div id="product_selector_purchase" onclick="purchaseProduct()" style="background-color: rgb(0, 127, 224); display: inline-block; cursor: pointer;">
+    <p>Purchase - <span id="product_selector_purchase_price"></span></p>
+  </div>
+  <!-- <input type="button" value="Purchase" id="product_selector_purchase" onclick="purchaseProduct()" /> -->
+  <p id="product_selector_purchase_err_msg" style="color: red"></p>
+</div>
+
+<script>
+  var stripe = Stripe("pk_live_51HVqdcFBf8tFdCApiT5MBg53VqpGbSPw0Ga4gaHvFOxXYXGFtQljyRnyLl1CkFNIvyVdugEuMSdjoDp8NnI15Y5j00y5m79xBY");
+  const plansInfo = {
+    nike: {
+      siteName: 'nike',
+      displayName: 'Nike',
+      discounts: {
+        '10%': {
+          minQuantity: 1,
+          price: 6.94,
+        },
+        '20%': {
+          minQuantity: 1,
+          price: 7.00,
+        }
+      },
+      description: [`(1 Day warranty) (lasts a few days)`, 
+        `Doesn't work on excluded items`,
+        `$500 Limit per code(USA)`
+      ]
+    },
+    'UA': {
+      siteName: 'UA',
+      displayName: 'Under Armour',
+      discounts: {
+        '20%': {
+          minQuantity: 1,
+          price: 10.00,
+        },
+        '50%': {
+          minQuantity: 1,
+          price: 30.00,
+        }
+      },
+      description: [`Select styles excluded (not many exclusions on these)`]
+    },
+    'croc': {
+      siteName: 'croc',
+      displayName: 'Crocs',
+      discounts: {
+        '$25': {
+          minQuantity: 1,
+          price: 9.48,
+        },
+      },
+      description: [`Excludes Classic Clogs in Adult and Kids`]
+    }
+  }
+
+  // <======== FORMATTERS =========>
+  // Dynamically generated components
+  function siteSelectionFormatter(names) {
+    const { siteName, displayName } = names
+    return `<option name="${names.siteName}">${names.displayName}</option>`
+  }
+
+  function codeTypeFormatter(codeType) {
+    return `<option value="${codeType}">${codeType}</option>`
+  }
+
+  function productDescriptionFormatter(ln) {
+    return `<p>- ${ln}</p>`
+  }
+
+  // <====== INITIAL CODE ======>
+  // Initially, dynamically create list of sites
+  // Get the selector for site selection dropdown
+  const siteSelector = document.getElementById('product_selector_site_selector_dropdown')
+  siteSelector.innerHTML = getAllSiteNames().map(names => siteSelectionFormatter(names))
+  updateSelections()
+
+  // <===== VALIDATOR FUNCTIONS =====>
+  function validateSelectedSite() {
+    const selectedDisplayName = document.getElementById('product_selector_site_selector_dropdown').value
+    const allSiteDisplayNames = getAllSiteNames().map(names => names.displayName)
+
+    // Valid site
+    if (allSiteDisplayNames.includes(selectedDisplayName)) return true
+
+    // Add error message for invalid site
+    return false
+  }
+
+  function validateSelectedCodeType() {
+    // Assume selected site is valid
+    const codeType = document.getElementById('product_selector_code_type_dropdown').value
+    const plan = getPlanNameForCurrentSelectedSite()
+
+    // Valid code type for current site
+    if (plan.discounts[codeType]) return true
+
+    // Add error message for code type
+    return false
+  }
+
+  function validateSelectedQuantity() {
+    // Assume selected site is valid
+    const codeType = document.getElementById('product_selector_code_type_dropdown').value
+    const plan = getPlanNameForCurrentSelectedSite()
+    const { minQuantity } = plan.discounts[codeType]
+
+    // Valid quantity for current plan
+    const errMsgElem = document.getElementById('product_selector_quantity_err_msg')
+    if (getAmount() >= minQuantity) {
+      errMsgElem.innerHTML = ``
+      return true
+    }
+
+    // Add error message for code type
+    errMsgElem.innerHTML = `Minimun quantity on this product is ${minQuantity}.`
+
+    return false
+  }
+
+  function validateCurrentCoupon() {
+    // Get current plan only if valid
+    const plan = getProductName()
+    if (plan === null) return
+
+    // Verify if discount is valid
+    const currentCoupon = getCurrentCouponText()
+    if (currentCoupon.length === 0) return true
+
+    fetch(`/verify_discount?discount=${currentCoupon}&plan=${plan}`)
+      .then(response => {
+        return response.json();
+      })
+      .then(data => {
+        // No discount should be applied
+        if (data.discount === 0) {
+          setCouponDiscountName(currentCoupon)
+          setCouponErrorMsg(data.message);
+          updatePricePer()
+        }
+
+        // Discount successfully applied
+        else {
+          // Add discount internally and verify coupon
+          const priceInfo = getPriceInfoForCurrentPlan()
+          priceInfo.discountedPrice = Math.ceil(priceInfo.price * (1 - data.discount) * 100) / 100
+          setCouponDiscountName(currentCoupon)
+
+          // Update visuals - TO-DO for front end
+          console.log('test')
+          setCouponErrorMsg('')
+          updatePricePer()
+        }
+      });
+    
+    
+  }
+
+  // <=== GETTER FUNCTIONS ===>
+  function getAmount() {
+    const amount = document.getElementById('product_selector_quantity').value ?? 0
+    return parseInt(amount) 
+  }
+
+  function getSelectedCodeType() {
+    return document.getElementById('product_selector_code_type_dropdown').value
+  }
+
+  function getProductName() {
+    const selectedSite = getPlanNameForCurrentSelectedSite().siteName
+    const selectedCodeType = document.getElementById('product_selector_code_type_dropdown').value.replace(/(\$|%)/g, '')
+    if (!selectedSite || !selectedCodeType) return null
+    
+    return selectedSite + selectedCodeType
+  }
+
+  function getCurrentCouponText() {
+    return document.getElementById('product_selector_coupon').value ?? ''
+  }
+
+  function getDiscountCode() {
+    return document.getElementById('product_selector_coupon').getAttribute('discountName') ?? ''
+  }
+
+  function hasCouponErrorMsg() {
+    return document.getElementById('product_selector_coupon_err_msg').innerHTML.length > 0
+  }
+
+  // <=== SETTER FUNCTIONs ===>
+  function setCouponErrorMsg(errMsg) {
+    document.getElementById('product_selector_coupon_err_msg').innerHTML = errMsg
+  }
+
+  function setPurchaseErrorMsg(errMsg) {
+    document.getElementById('product_selector_purchase_err_msg').innerHTML = errMsg
+  }
+
+  function setCouponDiscountName(discountName) {
+    document.getElementById('product_selector_coupon').setAttribute('discountName', discountName)
+  }
+
+  // Update selector with site display names
+  function getAllSiteNames() {
+    const siteDisplayNames = []
+    for (const plan of Object.values(plansInfo)) {
+      siteDisplayNames.push({
+        siteName: plan.siteName,
+        displayName: plan.displayName,
+      })
+    }
+    return siteDisplayNames
+  }
+
+  function getPlanNameForCurrentSelectedSite() {
+    const selectedSite = document.getElementById('product_selector_site_selector_dropdown').value
+    for (const plan of Object.values(plansInfo)) {
+      if (selectedSite === plan.displayName) return plan
+    }
+    return null
+  }
+
+  function getPriceInfoForCurrentPlan() {
+    // Use plan name to get right plan
+    const planName = getPlanNameForCurrentSelectedSite()
+    if (planName == null) return null
+
+    // Get the plan info object
+    const planInfo = plansInfo[planName.siteName]
+    if (planInfo == null) return null
+
+    // Get the discounts object
+    const { discounts } = planInfo
+    return discounts[getSelectedCodeType()] ?? null
+  }
+
+  // Dynamically update the discount code selection
+  function updateSelections() {
+    const codeTypes = getPlanNameForCurrentSelectedSite()
+    const codeTypeSelect = document.getElementById('product_selector_code_type_dropdown')
+    codeTypeSelect.innerHTML = Object.keys(codeTypes.discounts).map(codeType => codeTypeFormatter(codeType))
+
+    // Update the price per
+    updatePricePer()
+
+    // Update product description
+    updateProductDescription()
+  }
+
+  function updatePricePer() {
+    const { price, discountedPrice } = getPriceInfoForCurrentPlan()
+    const amount = getAmount()
+    console.log('amount', amount)
+
+    // Calculate both total and each price
+    const perPrice = discountedPrice ?? price
+    const totalPrice = perPrice * amount
+
+    // Update the price per element
+    const displayPerPrice = `$` + perPrice.toFixed(2)
+    const pricePerElem = document.getElementById('product_selector_price_per')
+    pricePerElem.innerHTML = `${displayPerPrice}`
+  
+    // Update the price on price button
+    const displayTotalPrice = `$` + totalPrice.toFixed(2)
+    const purchasePriceElem = document.getElementById('product_selector_purchase_price')
+    purchasePriceElem.innerHTML = `${displayTotalPrice}`
+  }
+
+  function updateProductDescription() {
+    const { description } = getPlanNameForCurrentSelectedSite()
+    
+    // Update product price information
+    const purchaseElem = document.getElementById('product_selector_product_description')
+    purchaseElem.innerHTML = description.map(ln => productDescriptionFormatter(ln)).join('')
+  }
+
+  function purchaseProduct() {
+    // Validate all inputs on click
+    if (!validateSelectedSite()) return
+    if (!validateSelectedCodeType()) return
+    if (!validateSelectedQuantity()) return
+    validateCurrentCoupon()
+
+    // Info needed: productName, amount, discount
+    const productName = getProductName()
+    const amount = getAmount()
+    const discount = getDiscountCode()
+
+    // Redirect this to Stripe end
+    fetch(  
+      `/checkout_session?product=${productName}&amount=${amount}&discount=${discount}`, {
+      method: "POST"
+    })
+      .then(response => {
+        return response.json();
+      })
+      .then(session => {
+        switch (session.id) {
+          case "stock_error":
+            return setPurchaseErrorMsg("We ran out of stock on this item. Please check back later!")
+            break;
+          case "not_found":
+            return setPurchaseErrorMsg("Plan not found")
+            break;
+          default:
+            setPurchaseErrorMsg('')
+            return stripe.redirectToCheckout({ sessionId: session.id });
+        }
+        /*
+        if (session.id === "stock_error") {
+            alert(
+                "We ran out of stock on this item. Please check back later!"
+            );
+        } else {
+            return stripe.redirectToCheckout({ sessionId: session.id });
+        }*/
+      })
+      .then(result => {
+        // Do nothing - either plan wasn't found or we ran out of stock
+        if (!result) return
+
+        if (result.error) {
+          alert(result.error.message);
+        }
+        // Purchase was successful, send purchase data to backend
+        else {
+          fetch(`/checkout_success?product=${plan}&amount=${amount}&discount=${currentCoupon}&code=${code}`, { method: "POST" });
+        }
+      })
+      .catch(error => {
+        console.error('Error', error);
+      });
+
+  }
+</script>

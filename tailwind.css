@@ -1,0 +1,137 @@
+@import url('https://fonts.googleapis.com/css2?family=Mukta:wght@200;300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.trans {
+    @apply transition duration-300 ease-in-out;
+}
+
+.btn {
+    @apply py-3 flex items-center justify-center text-center tracking-wide bg-primary hover:bg-primaryDark text-gray-100 hover:text-gray-200 font-semibold focus:outline-none transform active:scale-90 trans;
+}
+
+.btn-y {
+    @apply px-4 lg:px-12 flex items-center justify-center text-center tracking-wide bg-primary hover:bg-primaryDark text-gray-100 hover:text-gray-200 font-semibold focus:outline-none transform active:scale-90 trans;
+}
+
+.link {
+    @apply tracking-wide hover:underline text-gray-800 hover:text-gray-900 font-semibold focus:outline-none transform active:scale-90 trans;
+}
+
+.card-grid {
+    @apply bg-gray-100 p-7 overflow-hidden space-y-3 flex flex-col;
+}
+
+.card-title {
+    @apply text-xl md:text-2xl font-bold uppercase;
+}
+
+.card-price {
+    @apply text-gray-700 text-base;
+}
+
+.card-price-per {
+    @apply text-3xl text-gray-800 font-semibold;
+}
+
+.quanity-btn {
+    @apply h-full py-0.5 px-4 flex items-center justify-center text-center tracking-wide bg-primary hover:bg-primaryDark text-gray-100 hover:text-gray-200 font-semibold focus:outline-none transform active:scale-90 trans;
+}
+
+.quanity-input {
+  @apply w-20 text-xl border-gray-300 border-2 trans text-center;
+}
+
+.card-ol {
+    @apply text-gray-700 text-base md:text-lg flex-1;
+}
+
+.coupon-grid {
+    @apply flex space-x-2;
+}
+
+.card-select {
+    @apply w-full p-3 border-gray-300 border-2 trans;
+}
+
+.applyCOUP {
+  @apply text-xs md:text-sm hover:underline text-gray-800 hover:text-gray-900 font-semibold focus:outline-none transform active:scale-90 trans;
+}
+
+.faq-card {
+    @apply relative bg-gray-100 trans;
+}
+
+.error-message {
+    @apply text-center text-red-500 font-bold;
+}
+
+.partner-img {
+    @apply rounded-full mx-auto h-32 md:h-40 focus:outline-none;
+}
+
+::-webkit-scrollbar {
+    width: 10px;
+    background: #fff;
+}
+
+::-webkit-scrollbar-track {
+    box-shadow: inset 0 0 5px #fff;
+    background: #fff;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #007fe0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #007fe0;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    overflow-x: hidden;
+}
+
+* {
+ font-variant-ligatures: none;
+}
+
+.text-shadow {
+    text-shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
+}
+
+.faq-icon {
+    -moz-transform: rotate(-90deg);
+    -ms-transform: rotate(-90deg);
+    -webkit-transform: rotate(-90deg);
+    transform: rotate(-90deg);
+    display: block;
+    float: right;
+    position: relative;
+    transition: all .7s ease-in-out;
+}
+
+/* .ellipse-bg {
+    overflow: hidden;
+}
+
+.ellipse-bg:after {
+    content: "";
+    display: block;
+    width: 3526px;
+    height: 1266px;
+    background-image: url(/public/assets/ellipse-bg.svg);
+    background-size: 3526px 1266px;
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    -webkit-transform: translateX(-50%);
+    transform: translateX(-50%);
+    z-index: -1;
+} */

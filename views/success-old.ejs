@@ -1,0 +1,20 @@
+<html>
+  <body>
+    
+    <h1>Order number: <%= orderNum %></h1>
+    <h1>Product: <%= product %></h1>
+    <h1>Quantity: <%= quantity %></h1>
+
+    <% /* Should be plural if multiple products */ %>
+    <% if (purchasedCodes.length > 1) { %>
+      <h1>Here are your products:</h1>
+    <% } else { %>
+      <h1>Here is your product:</h1>
+    <% } %>
+
+    <% /* Create new tag for each product */ %>
+    <% for (const code of purchasedCodes) { %>
+      <h1><%= code %></h1>
+    <% } %>
+  </body>
+</html>
