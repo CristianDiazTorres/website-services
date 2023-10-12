@@ -7,6 +7,7 @@ A simple template for websites made in HTML and CSS, with an Express.js back-end
 ```
 npm install
 npm start
+
 ```
 
 After this, you're all set. Open [http://localhost:8080](http://localhost:8080) to view your website. Modify index.html to change the website. If you want to use SCSS, make sure you have a file watcher set-up to convert style.scss to style.css.
