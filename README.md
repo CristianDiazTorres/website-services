@@ -6,6 +6,7 @@ A simple template for websites made in HTML and CSS, with an Express.js back-end
 
 ```
 npm install
+
 npm start
 
 ```
